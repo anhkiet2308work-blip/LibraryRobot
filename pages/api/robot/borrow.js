@@ -1,0 +1,63 @@
+import { supabase } from '../../../lib/supabase'
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    const { orderId } = req.body
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID là bắt buộc' })
+    }
+
+    // Lấy thông tin order
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_detail(rfid, return_timestamp, book(rfid, name, book_lefts))
+      `)
+      .eq('order_id', orderId)
+      .single()
+
+    if (orderError || !order) {
+      return res.status(404).json({ error: 'Không tìm thấy đơn hàng' })
+    }
+
+    // Kiểm tra order đang pending
+    if (order.status !== 'pending') {
+      return res.status(400).json({ error: 'Đơn hàng này đã được xử lý' })
+    }
+
+    // Kiểm tra các sách chưa được mượn (return_timestamp phải null)
+    const booksToLend = order.order_detail.filter(detail => !detail.return_timestamp)
+
+    if (booksToLend.length === 0) {
+      return res.status(400).json({ error: 'Tất cả sách trong đơn đã được mượn' })
+    }
+
+    // ⚠️ NOTE: book_lefts đã được trừ khi tạo order
+    // Endpoint này chỉ để Robot xác nhận đã xuất sách
+    // Không cần trừ book_lefts nữa
+
+    // Lấy thông tin order sau khi cập nhật
+    const { data: updatedOrder } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_detail(rfid, return_timestamp, book(rfid, name, book_lefts))
+      `)
+      .eq('order_id', orderId)
+      .single()
+
+    return res.status(200).json({ 
+      message: `Đã mượn ${booksToLend.length} sách thành công`,
+      order: updatedOrder
+    })
+  } catch (error) {
+    console.error('Borrow books error:', error)
+    return res.status(500).json({ error: 'Không thể mượn sách' })
+  }
+}
