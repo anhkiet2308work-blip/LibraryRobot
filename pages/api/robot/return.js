@@ -29,14 +29,27 @@ export default async function handler(req, res) {
     const now = new Date().toISOString()
     const returnedBooks = []
 
+    // Normalize function
+    const normalize = (val) => String(val).trim()
+    
     // Xử lý từng RFID
     for (const rfid of rfids) {
-      // Kiểm tra RFID có trong order không
-      const orderDetail = order.order_detail.find(d => d.rfid === rfid)
+      const cleanRfid = rfid.trim()
+      
+      // Kiểm tra RFID có trong order không (normalize cả 2 bên)
+      const orderDetail = order.order_detail.find(d => 
+        normalize(d.rfid) === normalize(cleanRfid)
+      )
       
       if (!orderDetail) {
+        console.log('❌ RFID không tìm thấy:', cleanRfid)
+        console.log('📚 RFIDs trong order:', order.order_detail.map(d => ({
+          rfid: d.rfid,
+          normalized: normalize(d.rfid),
+          match: normalize(d.rfid) === normalize(cleanRfid)
+        })))
         return res.status(400).json({ 
-          error: `RFID ${rfid} không thuộc đơn hàng này` 
+          error: `RFID ${cleanRfid} không thuộc đơn hàng này` 
         })
       }
 
@@ -47,33 +60,42 @@ export default async function handler(req, res) {
         })
       }
 
-      // Cập nhật return_timestamp
+      // Dùng RFID thực từ database (orderDetail.rfid) để đảm bảo khớp
+      const dbRfid = orderDetail.rfid
+      
+      console.log('✅ Trả sách:', {
+        inputRfid: cleanRfid,
+        dbRfid: dbRfid,
+        bookName: orderDetail.book.name
+      })
+
+      // Cập nhật return_timestamp (dùng RFID từ database)
       const { error: updateDetailError } = await supabase
         .from('order_detail')
         .update({ return_timestamp: now })
         .eq('order_id', orderId)
-        .eq('rfid', rfid)
+        .eq('rfid', dbRfid)
 
       if (updateDetailError) throw updateDetailError
 
-      // Tăng book_lefts
+      // Tăng book_lefts (dùng RFID từ database)
       const { data: book } = await supabase
         .from('book')
         .select('book_lefts')
-        .eq('rfid', rfid)
+        .eq('rfid', dbRfid)
         .single()
 
       if (book) {
         const { error: updateBookError } = await supabase
           .from('book')
           .update({ book_lefts: book.book_lefts + 1 })
-          .eq('rfid', rfid)
+          .eq('rfid', dbRfid)
 
         if (updateBookError) throw updateBookError
       }
 
       returnedBooks.push({
-        rfid,
+        rfid: dbRfid,
         name: orderDetail.book.name
       })
     }

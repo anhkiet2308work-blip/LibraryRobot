@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test RFID Scanner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      font-size: 18px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    button {
+      background: #0070f3;
+      color: white;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #0051cc;
+    }
+    .output {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Test RFID Scanner</h1>
+    <p>Công cụ debug để kiểm tra RFID từ HID scanner</p>
+    
+    <hr>
+    
+    <h2>1. Quét RFID (Password Input)</h2>
+    <input 
+      type="password" 
+      id="rfidPassword" 
+      placeholder="Quét RFID bằng HID scanner..."
+      autocomplete="off"
+    >
+    
+    <h2>2. Quét RFID (Text Input)</h2>
+    <input 
+      type="text" 
+      id="rfidText" 
+      placeholder="Quét RFID bằng HID scanner..."
+      autocomplete="off"
+    >
+    
+    <button onclick="analyzeRfid()">📊 Phân tích RFID</button>
+    <button onclick="clearOutput()">🗑️ Xóa</button>
+    <button onclick="testAPI()">🌐 Test API</button>
+    
+    <h2>Kết quả:</h2>
+    <div class="output" id="output">Chờ quét RFID...</div>
+  </div>
+
+  <script>
+    const output = document.getElementById('output')
+    const rfidPassword = document.getElementById('rfidPassword')
+    const rfidText = document.getElementById('rfidText')
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString('vi-VN')
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : ''
+      output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`
+      output.scrollTop = output.scrollHeight
+    }
+    
+    function analyzeRfid() {
+      const passwordValue = rfidPassword.value
+      const textValue = rfidText.value
+      
+      log('═══════════════════════════════════', 'info')
+      log('📝 PHÂN TÍCH RFID', 'success')
+      log('═══════════════════════════════════', 'info')
+      
+      // Password input
+      log('\n🔒 PASSWORD INPUT:')
+      log(`  Raw value: "${passwordValue}"`)
+      log(`  Length: ${passwordValue.length}`)
+      log(`  Trimmed: "${passwordValue.trim()}"`)
+      log(`  Trimmed length: ${passwordValue.trim().length}`)
+      log(`  Char codes: [${passwordValue.split('').map(c => c.charCodeAt(0)).join(', ')}]`)
+      
+      // Text input
+      log('\n📄 TEXT INPUT:')
+      log(`  Raw value: "${textValue}"`)
+      log(`  Length: ${textValue.length}`)
+      log(`  Trimmed: "${textValue.trim()}"`)
+      log(`  Trimmed length: ${textValue.trim().length}`)
+      log(`  Char codes: [${textValue.split('').map(c => c.charCodeAt(0)).join(', ')}]`)
+      
+      // So sánh
+      log('\n🔍 SO SÁNH:')
+      log(`  Password === Text: ${passwordValue === textValue}`)
+      log(`  Trimmed Password === Trimmed Text: ${passwordValue.trim() === textValue.trim()}`)
+      
+      // Test với RFIDs mẫu
+      const sampleRfids = [
+        '2516072455',
+        '2501653831',
+        '2502391063',
+        '2502815623'
+      ]
+      
+      log('\n🎯 TEST VỚI DATABASE:')
+      sampleRfids.forEach(sample => {
+        const matchPassword = passwordValue.trim() === sample
+        const matchText = textValue.trim() === sample
+        if (matchPassword || matchText) {
+          log(`  ✅ MATCH: "${sample}"`, 'success')
+        } else {
+          log(`  ❌ NO MATCH: "${sample}"`)
+        }
+      })
+      
+      log('\n═══════════════════════════════════\n', 'info')
+    }
+    
+    async function testAPI() {
+      const rfid = rfidPassword.value.trim() || rfidText.value.trim()
+      
+      if (!rfid) {
+        log('❌ Vui lòng quét RFID trước', 'error')
+        return
+      }
+      
+      log('═══════════════════════════════════', 'info')
+      log('🌐 TEST API', 'success')
+      log('═══════════════════════════════════', 'info')
+      log(`Testing RFID: "${rfid}"`)
+      
+      try {
+        // Test 1: Lấy tất cả sách
+        log('\n📚 Fetching all books...')
+        const booksRes = await fetch('/api/books')
+        const books = await booksRes.json()
+        
+        const foundBook = books.find(b => String(b.rfid).trim() === rfid)
+        
+        if (foundBook) {
+          log(`✅ Tìm thấy sách trong database:`, 'success')
+          log(`  - Name: ${foundBook.name}`)
+          log(`  - RFID: ${foundBook.rfid}`)
+          log(`  - Stock: ${foundBook.book_lefts}`)
+        } else {
+          log(`❌ KHÔNG tìm thấy sách với RFID "${rfid}"`, 'error')
+          log(`\n📋 Tất cả RFIDs trong database:`)
+          books.forEach((b, i) => {
+            log(`  ${i+1}. "${b.rfid}" - ${b.name}`)
+          })
+        }
+        
+        // Test 2: Kiểm tra đơn hàng
+        log('\n📦 Checking orders...')
+        const ordersRes = await fetch('/api/orders')
+        const orders = await ordersRes.json()
+        
+        const pendingOrders = orders.filter(o => o.status === 'pending')
+        log(`Found ${pendingOrders.length} pending orders`)
+        
+        if (pendingOrders.length > 0) {
+          for (const order of pendingOrders) {
+            const detailRes = await fetch(`/api/orders/${order.order_id}`)
+            const { order: orderDetail } = await detailRes.json()
+            
+            const hasRfid = orderDetail.order_detail.some(d => 
+              String(d.rfid).trim() === rfid
+            )
+            
+            if (hasRfid) {
+              log(`✅ RFID "${rfid}" có trong đơn hàng #${order.order_id}`, 'success')
+            } else {
+              log(`❌ RFID "${rfid}" KHÔNG có trong đơn hàng #${order.order_id}`)
+              log(`   RFIDs trong đơn: ${orderDetail.order_detail.map(d => d.rfid).join(', ')}`)
+            }
+          }
+        }
+        
+      } catch (error) {
+        log(`❌ Lỗi: ${error.message}`, 'error')
+      }
+      
+      log('\n═══════════════════════════════════\n', 'info')
+    }
+    
+    function clearOutput() {
+      output.innerHTML = 'Chờ quét RFID...\n'
+    }
+    
+    // Auto-analyze on input change
+    rfidPassword.addEventListener('input', (e) => {
+      log(`📝 Password input changed: "${e.target.value}" (${e.target.value.length} chars)`)
+    })
+    
+    rfidText.addEventListener('input', (e) => {
+      log(`📝 Text input changed: "${e.target.value}" (${e.target.value.length} chars)`)
+    })
+    
+    // Auto-analyze on Enter key
+    rfidPassword.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        analyzeRfid()
+      }
+    })
+    
+    rfidText.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        analyzeRfid()
+      }
+    })
+    
+    log('✅ Ready! Hãy quét RFID bằng HID scanner...', 'success')
+  </script>
+</body>
+</html>

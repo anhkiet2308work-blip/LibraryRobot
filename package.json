@@ -6,16 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "bridge": "node scripts/start-serial-bridge.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "chart.js": "^4.5.1",
+    "mqtt": "^5.14.1",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "serialport": "^13.0.0",
+    "ws": "^8.18.3",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",

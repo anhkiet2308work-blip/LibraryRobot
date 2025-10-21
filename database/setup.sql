@@ -19,7 +19,10 @@ DROP TABLE IF EXISTS users;
 DROP TYPE IF EXISTS order_status;
 
 -- Tạo kiểu ENUM trạng thái đơn hàng
-CREATE TYPE order_status AS ENUM ('pending', 'completed');
+-- ordering: Đã đặt đơn (chưa "Tiến hành lấy sách")
+-- pending: Đang mượn (đã gửi JSON thành công)
+-- completed: Đã hoàn thành (đã trả hết sách)
+CREATE TYPE order_status AS ENUM ('ordering', 'pending', 'completed');
 
 -- Extension cho email không phân biệt hoa thường
 CREATE EXTENSION IF NOT EXISTS citext;
@@ -55,7 +58,7 @@ CREATE TABLE orders (
   user_id     BIGINT NOT NULL REFERENCES users(user_id)
                ON UPDATE CASCADE ON DELETE RESTRICT,
   ts_created  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  status      order_status NOT NULL DEFAULT 'pending'
+  status      order_status NOT NULL DEFAULT 'ordering'
 );
 
 -- =====================================================
@@ -116,8 +119,13 @@ $$;
 -- =====================================================
 -- TRIGGER: Tự động cập nhật trạng thái đơn hàng
 -- =====================================================
+-- Trigger should not run on INSERT of order_detail because when a new order is created
+-- order_detail rows (with NULL return_timestamp) are inserted immediately after the
+-- orders row. That would cause the function to mark the new order as 'pending' right
+-- away. We only want the trigger to run when order_detail rows are UPDATED (return
+-- timestamps set) or DELETED, so that completed/pending state reflects returns.
 CREATE TRIGGER trg_orders_autocomplete
-AFTER INSERT OR UPDATE OR DELETE ON order_detail
+AFTER UPDATE OR DELETE ON order_detail
 FOR EACH ROW
 EXECUTE FUNCTION fn_orders_autocomplete();
 

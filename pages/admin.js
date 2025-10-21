@@ -15,7 +15,8 @@ import {
   updateBook,
   deleteBook,
   getReport,
-  getAdminStatistics
+  getAdminStatistics,
+  deleteOrder
 } from '../lib/api'
 import toast from 'react-hot-toast'
 import MonthlyBorrowingChart from '../components/MonthlyBorrowingChart'
@@ -91,6 +92,33 @@ export default function AdminPage() {
       setStatistics(statsData)
     } catch (error) {
       toast.error('Không thể tải thống kê')
+    }
+  }
+
+  const handleDeleteOrder = async (orderId, orderStatus) => {
+    // Admin chỉ có thể xóa đơn ở trạng thái 'ordering' (chưa lấy sách)
+    if (orderStatus !== 'ordering') {
+      toast.error('Chỉ có thể xóa đơn hàng đang xử lý (chưa lấy sách)')
+      return
+    }
+
+    if (!confirm(`Bạn có chắc muốn xóa đơn hàng #${orderId}?`)) {
+      return
+    }
+
+    try {
+      await deleteOrder(orderId)
+      toast.success('Đã xóa đơn hàng')
+      
+      // Reload reports và books
+      const [reportsData, booksData] = await Promise.all([
+        getReport(),
+        getBooks()
+      ])
+      setReports(reportsData)
+      setBooks(booksData)
+    } catch (error) {
+      toast.error('Không thể xóa đơn hàng: ' + error.message)
     }
   }
 
@@ -317,7 +345,7 @@ export default function AdminPage() {
             {reports.map(order => (
               <div key={order.order_id} className="border rounded-lg p-4">
                 <div className="flex justify-between items-start mb-3">
-                  <div>
+                  <div className="flex-1">
                     <p className="font-bold">Đơn hàng #{order.order_id}</p>
                     <p className="text-sm text-gray-600">
                       Người dùng: {order.users.email}
@@ -326,13 +354,30 @@ export default function AdminPage() {
                       Thời gian: {new Date(order.ts_created).toLocaleString('vi-VN')}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    order.status === 'completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {order.status === 'completed' ? 'Hoàn thành' : 'Đang mượn'}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-3 py-1 rounded-full text-sm ${
+                      order.status === 'completed' 
+                        ? 'bg-green-100 text-green-800' 
+                        : order.status === 'pending'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.status === 'completed' 
+                        ? 'Hoàn thành' 
+                      : order.status === 'pending' 
+                      ? 'Đang mượn' 
+                      : 'Đang xử lý'}
+                    </span>
+                    {order.status === 'ordering' && (
+                      <button
+                        onClick={() => handleDeleteOrder(order.order_id, order.status)}
+                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium transition-colors"
+                        title="Xóa đơn hàng"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   {order.order_detail.map((detail, idx) => (
@@ -472,7 +517,7 @@ export default function AdminPage() {
                   <div className="text-3xl font-bold text-yellow-600">
                     {statistics.overview[0].active_orders}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Đơn đang mượn</div>
+                  <div className="text-sm text-gray-600 mt-1">Đơn đang mượn/chờ</div>
                 </div>
               </div>
             </Card>

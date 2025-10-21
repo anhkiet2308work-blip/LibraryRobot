@@ -70,17 +70,22 @@ async function handleCreate(req, res) {
       }
     }
 
-    // Tạo order
+    // Tạo order - để database tự dùng default status = 'ordering'
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([{
-        user_id: userId,
-        status: 'pending'
+        user_id: userId
+        // Không set status - để database dùng DEFAULT 'ordering'
       }])
       .select()
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      console.error('❌ Create order error:', orderError)
+      throw orderError
+    }
+    
+    console.log('✅ Created order (order_id:', order.order_id, 'status:', order.status, ')')
 
     // Tạo order_detail cho từng sách
     const orderDetails = bookRfids.map(rfid => ({
