@@ -95,16 +95,25 @@ export default function RobotPage() {
       // Lấy tất cả sách trong đơn chưa được mượn
       const booksToFetch = order.order_detail
         .filter(d => !d.return_timestamp)
-        .map((d, index) => ({
-          sequence: index + 1,
-          rfid: d.rfid,
-          name: d.book.name,
-          position: {
-            x: d.book.position_x,
-            y: d.book.position_y,
-            z: d.book.position_z
+        .map((d, index) => {
+          console.log(`📚 Book ${index + 1}:`, {
+            rfid: d.rfid,
+            name: d.book.name,
+            position_x: d.book.position_x,
+            position_y: d.book.position_y,
+            position_z: d.book.position_z
+          })
+          return {
+            sequence: index + 1,
+            rfid: d.rfid,
+            name: d.book.name,
+            position: {
+              x: d.book.position_x,
+              y: d.book.position_y,
+              z: d.book.position_z
+            }
           }
-        }))
+        })
       
       // Kiểm tra kết nối MQTT
       if (!isRobotConnected) {
