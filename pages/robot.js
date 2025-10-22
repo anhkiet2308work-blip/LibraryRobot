@@ -28,13 +28,28 @@ export default function RobotPage() {
 
     const handleConnected = () => setIsRobotConnected(true)
     const handleDisconnected = () => setIsRobotConnected(false)
+    
+    // Xử lý response từ robot
+    const handleRobotSuccess = (data) => {
+      console.log('✅ Robot response: Success', data)
+      toast.success('✅ Robot: Lấy sách thành công!', { duration: 5000 })
+    }
+    
+    const handleRobotFail = (data) => {
+      console.log('❌ Robot response: Fail', data)
+      toast.error('❌ Robot: Lấy sách thất bại!', { duration: 5000 })
+    }
 
     client.on('mqtt_connected', handleConnected)
     client.on('mqtt_disconnected', handleDisconnected)
+    client.on('robot_success', handleRobotSuccess)
+    client.on('robot_fail', handleRobotFail)
 
     return () => {
       client.off('mqtt_connected', handleConnected)
       client.off('mqtt_disconnected', handleDisconnected)
+      client.off('robot_success', handleRobotSuccess)
+      client.off('robot_fail', handleRobotFail)
     }
   }, [])
 

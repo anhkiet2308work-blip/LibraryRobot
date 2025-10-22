@@ -35,10 +35,6 @@ export default function Home() {
     }
   }
 
-  const handleRobotAccess = () => {
-    router.push('/robot')
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6">
@@ -85,19 +81,9 @@ export default function Home() {
           </form>
         </Card>
 
-        {/* Robot Access */}
-        <Card>
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Hoặc truy cập giao diện Robot</p>
-            <Button onClick={handleRobotAccess} variant="secondary" className="w-full">
-              🤖 Giao diện Robot
-            </Button>
-          </div>
-        </Card>
-
         {/* Info */}
         <div className="text-center text-white text-sm">
-          <p>Demo Mode - Robot không cần mã xác thực</p>
+          <p>Hệ thống quản lý thư viện tự động với Robot</p>
         </div>
       </div>
     </div>
