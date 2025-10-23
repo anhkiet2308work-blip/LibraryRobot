@@ -29,14 +29,14 @@ export default function RobotPage() {
     const handleConnected = () => setIsRobotConnected(true)
     const handleDisconnected = () => setIsRobotConnected(false)
     
-    // Xử lý response từ robot
+    // Xử lý response từ robot qua MQTT
     const handleRobotSuccess = (data) => {
-      console.log('✅ Robot response: Success', data)
+      console.log('✅ Robot response (MQTT): Success', data)
       toast.success('✅ Robot: Lấy sách thành công!', { duration: 5000 })
     }
     
     const handleRobotFail = (data) => {
-      console.log('❌ Robot response: Fail', data)
+      console.log('❌ Robot response (MQTT): Fail', data)
       toast.error('❌ Robot: Lấy sách thất bại!', { duration: 5000 })
     }
 
@@ -45,7 +45,28 @@ export default function RobotPage() {
     client.on('robot_success', handleRobotSuccess)
     client.on('robot_fail', handleRobotFail)
 
+    // Polling webhook để nhận response từ robot (fallback nếu MQTT không dùng được)
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/robot/webhook')
+        const json = await res.json()
+        
+        if (json.data && json.data.process_status) {
+          console.log('📡 Robot response (Webhook):', json.data)
+          
+          if (json.data.process_status === 'success') {
+            toast.success('✅ Robot: Lấy sách thành công!', { duration: 5000 })
+          } else if (json.data.process_status === 'fail') {
+            toast.error('❌ Robot: Lấy sách thất bại!', { duration: 5000 })
+          }
+        }
+      } catch (error) {
+        // Silent fail - không log để tránh spam console
+      }
+    }, 2000) // Poll mỗi 2 giây
+
     return () => {
+      clearInterval(pollInterval)
       client.off('mqtt_connected', handleConnected)
       client.off('mqtt_disconnected', handleDisconnected)
       client.off('robot_success', handleRobotSuccess)
